@@ -1,0 +1,89 @@
+######################
+# - Conky settings - #
+######################
+update_interval 1
+total_run_times 0
+net_avg_samples 1
+cpu_avg_samples 1
+if_up_strictness link
+ 
+imlib_cache_size 0
+double_buffer yes
+no_buffers yes
+ 
+format_human_readable
+ 
+#####################
+# - Text settings - #
+#####################
+use_xft yes
+xftfont Liberation Sans:size=11
+override_utf8_locale yes
+text_buffer_size 2048
+ 
+#############################
+# - Window specifications - #
+#############################
+own_window_class Conky
+own_window yes
+own_window_type normal
+own_window_colour 0A2928
+own_window_hints undecorated,below,sticky,skip_taskbar,skip_pager
+ 
+alignment top_right
+gap_x 25
+gap_y 60
+minimum_size 182 600
+maximum_width 182
+ 
+default_bar_size 60 8
+ 
+#########################
+# - Graphics settings - #
+#########################
+draw_shades yes
+draw_borders yes
+border_inner_margin 5
+border_width 5 
+default_color 0099FF
+color1 0099FF
+color2 0099FF
+
+TEXT
+##############
+# - SYSTEM - #
+##############
+${font Liberation Sans:style=Bold:size=14}SYSTEM $stippled_hr${font}
+${voffset 0}
+${goto 32}${voffset -18}Battery: ${alignr}${color1}${battery_percent BAT0}%${color}
+${goto 32}Uptime: ${alignr}${color1}${uptime}${color}
+${goto 32}${voffset 0}Storage: ${alignr}${color1}${fs_free /}${color}${font}
+###############
+# - NETWORK - #
+###############
+${font Liberation Sans:bold:size=14}NETWORK $stippled_hr${font}
+${font Liberation Sans:size=11}Signal: ${wireless_link_qual_perc wlp2s0}%
+${color2}${downspeedgraph wlp2s0}
+${color1}Download: ${downspeed wlp2s0} $alignr Total: ${totaldown wlp2s0}
+${color2}${upspeedgraph}
+${color1}Upload: ${upspeed wlp2s0} $alignr Total: ${totalup wlp2s0}
+#############
+# - EMAIL - #
+#############
+${font Liberation Sans:bold:size=14}MESSAGES $stippled_hr${font}
+${voffset 0}
+${goto 32}${voffset -18}Email: ${alignr}${color1}${execi 300 /home/ww/misc/newmail.py} new${color}
+${goto 32}Reddit: ${alignr}${color1} ${color}
+#############
+# - MUSIC - #
+#############
+${font Liberation Sans:bold:size=14}MUSIC $stippled_hr${font}
+$mpd_artist - $mpd_title
+$mpd_status
+$mpd_elapsed/$mpd_length
+#############
+# - CLOCK - #
+#############
+${voffset 200}${font Liberation Sans:style=Bold:size=14}DATE $stippled_hr${font}
+${voffset -2}${alignc 38}${color2}${font Liberation Sans:style=Bold:size=30}${time %H:%M}${font}${color}
+${alignc}${time %d %B %Y}
