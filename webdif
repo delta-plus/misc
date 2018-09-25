@@ -1,0 +1,167 @@
+#!/usr/local/bin/python3.6
+
+import sys
+import time
+import getopt
+import _thread
+import progressbar
+from os import listdir
+from urllib import request
+from urllib.error import HTTPError
+from bs4 import BeautifulSoup as soup
+
+usage = '''
+ ──────
+│WebDif│
+ ──────
+
+WebDif is for when scanning web directories based on status codes just doesn't cut it.
+
+  -r [url]
+     Enter a root URL to scan. Include http(s)://, exclude trailing /
+
+  -w [filepath]
+     Enter a wordlist to use
+
+  -t [sane number]
+     Choose number of threads to use
+
+  -u
+     Match scanned pages against those included in the exurls file
+
+  -p
+     Match scanned pages against html docs in the expages directory
+
+  -s
+     Match against excluded page skeletons (the structure of elements in the page)
+     This is useful when "Not Found" pages have some dynamic content in them
+
+  -c
+     Match against the whole content of excluded pages
+
+  -P [prefix]
+     Add a prefix to all wordlist strings
+
+  -S [suffix]
+     Add a suffix to all wordlist strings
+
+  -h
+     Display this help text
+'''
+
+excluded = []
+prefix = ''
+suffix = ''
+
+widgets=[
+  progressbar.Timer(),
+  progressbar.Bar('█'),
+]
+
+try:
+  opts, args = getopt.getopt(sys.argv[1:], 'hupscr:w:t:P:S:',['help'])
+except getopt.GetoptError:
+  print(usage)
+  exit()
+
+if len(sys.argv) == 1:
+   print(usage)
+   exit()
+
+for opt, arg in opts:
+  if opt in ('-h', '--help'):
+    print(usage)
+    exit()
+  elif opt == '-u':
+    excludeFrom = 'urls'
+    for option, argument in opts:
+      print(option)
+      if option == '-p':
+        print(usage)
+        exit()
+  elif opt == '-p':
+    excludeFrom = 'pages'
+    for option in opts:
+      if option == '-u':
+        print(usage)
+        exit()
+  elif opt == '-s':
+    mode = 'skeleton'
+    for option in opts:
+      if option == '-c':
+        print(usage)
+        exit()
+  elif opt == '-c':
+    mode = 'content'
+    for option in opts:
+      if option == '-s':
+        print(usage)
+        exit()
+  elif opt == '-r':
+    webroot = arg + '/'
+  elif opt == '-w':
+    wordlist = open(arg, 'r', encoding='mac_roman').read().splitlines()
+  elif opt == '-t':
+    threads = int(arg)
+  elif opt == '-P':
+    prefix = arg
+  elif opt == '-S':
+    suffix = arg
+
+if excludeFrom == 'urls':
+  with open('/home/ww/tools/webdif/exurls', 'r') as urls:
+    for url in urls:
+      doc = soup(request.urlopen(url), 'html.parser')
+      if mode == 'skeleton':
+        skeleton = [tag.name for tag in doc.find_all()]
+        excluded.append(skeleton)
+      elif mode == 'content':
+        content = doc.prettify()
+        excluded.append(content)
+elif excludeFrom == 'pages':
+  for file in listdir('/home/ww/tools/webdif/expages'):
+    doc = soup(open('/home/ww/tools/webdif/expages/' + file, 'r').read(), 'html.parser')
+    if mode == 'skeleton':
+      skeleton = [tag.name for tag in doc.find_all()]
+      excluded.append(skeleton)
+    elif mode == 'content':
+      content = doc.prettify()
+      excluded.append(content)
+
+def checkUrl(string):
+#  print(string)
+  try:
+    new = True
+    page = soup(request.urlopen(webroot + prefix + string + suffix), 'html.parser')
+    if mode == 'skeleton':
+      pageSkeleton = [tag.name for tag in page.find_all()]
+      for exSkeleton in excluded:
+        if pageSkeleton == exSkeleton:
+          new = False
+      if new:
+        print(prefix + string.rstrip() + suffix)
+    elif mode == 'content':
+      pageContent = page.prettify()
+      for exContent in excluded:
+        if pageContent == exContent:
+          new = False
+      if new:
+        print(prefix + string.rstrip() + suffix)
+  except HTTPError as err:
+    if err.code != 404:
+      print(str(err.code) + ' ' + prefix + string.rstrip() + suffix)
+    pass
+
+def checkChunk(chunk):
+  for num in chunk:
+    checkUrl(wordlist[num])
+
+for i in progressbar.progressbar(range(0, len(wordlist), threads), redirect_stdout=True, widgets=widgets):
+  time.sleep(.5)
+  chunkList = []
+  for x in range(threads):
+    chunkList.append(i + x)
+  try:
+    _thread.start_new_thread(checkChunk, (chunkList,))
+  except Exception:
+    print('Thread ' + str(i) + 'not started')
